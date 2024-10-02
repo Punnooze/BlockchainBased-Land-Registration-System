@@ -90,7 +90,7 @@ const LandRegistry = () => {
       // Check if the property exists and if the user is the owner
       const property = await contract.methods.viewPropertyByPId(p_id).call();
       if (property[0] === '') {
-        alert("Property does not exist.");
+        alert('Property does not exist.');
         return;
       }
 
@@ -117,13 +117,18 @@ const LandRegistry = () => {
     }
 
     try {
-      const { 0: ids, 1: owners, 2: details } = await contract.methods.getAllProperties().call();
-      const allProperties = ids.map((id, index) => ( {
-        id: id.replace(account, ''), // Show p_id instead of merged id
+      const {
+        0: ids,
+        1: owners,
+        2: details,
+      } = await contract.methods.getAllProperties().call();
+
+      const allProperties = ids.map((id, index) => ({
+        // Assuming p_id is part of id and we want to extract it correctly
+        id: id.replace(account, ''), // Extract p_id from the combined id
         owner: owners[index],
         details: details[index],
       }));
-      // Reverse the array so the newest properties are displayed first
       setProperties(allProperties.reverse()); // Update state with all properties
     } catch (error) {
       console.error('Error fetching all properties: ', error);
@@ -180,11 +185,15 @@ const LandRegistry = () => {
 
       <h2>All Properties</h2>
       <ul>
-        {properties.map((property, index) => (
-          <li key={index}>
-            ID: {property.id}, Owner: {property.owner}, Details: {property.details}
-          </li>
-        ))}
+        {properties.map((property, index) => {
+          const numericId = property.id.match(/\d+/)?.[0]; // Match one or more digits
+
+          return (
+            <li key={index}>
+              ID: {numericId}, Owner: {property.owner}, Details:{property.details}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

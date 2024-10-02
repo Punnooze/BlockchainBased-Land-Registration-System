@@ -4,7 +4,7 @@ import LandRegistry from './LandRegistry';
 
 function App() {
     return (
-        <div>
+        <div className=''>
             <h1>Land Registry</h1>
             <LandRegistry />
         </div>
