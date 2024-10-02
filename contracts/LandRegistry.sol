@@ -41,18 +41,24 @@ contract LandRegistry {
     }
 
     function transferProperty(string memory _p_id, address _newOwner) public {
-        // Construct current property ID based on p_id and caller's address
-        string memory currentPropertyId = string(abi.encodePacked(_p_id, msg.sender));
-        require(properties[currentPropertyId].exists, "Property does not exist");
-        require(properties[currentPropertyId].owner == msg.sender, "Only the owner can transfer the property");
+    // Construct the current property ID based on p_id and caller's address
+    string memory currentPropertyId = string(abi.encodePacked(_p_id, msg.sender));
+    
+    // Check if the property exists and if the current user is the owner
+    require(properties[currentPropertyId].exists, "Property does not exist");
+    require(properties[currentPropertyId].owner == msg.sender, "Only the owner can transfer the property");
 
-        // Create new property ID for the new owner
-        string memory newPropertyId = string(abi.encodePacked(_p_id, _newOwner));
-        properties[newPropertyId] = Property(newPropertyId, _p_id, _newOwner, properties[currentPropertyId].details, true);
-        propertyIds.push(newPropertyId);
+    // Create a new property ID for the new owner
+    string memory newPropertyId = string(abi.encodePacked(_p_id, _newOwner));
+    
+    // Transfer the property by creating a new entry for the new owner
+    properties[newPropertyId] = Property(newPropertyId, _p_id, _newOwner, properties[currentPropertyId].details, true);
+    propertyIds.push(newPropertyId);
 
-        emit PropertyTransferred(currentPropertyId, msg.sender, _newOwner);
+    // Emit the transfer event
+    emit PropertyTransferred(currentPropertyId, msg.sender, _newOwner);
     }
+
 
     // Function to retrieve all registered properties
     function getAllProperties() public view returns (string[] memory, address[] memory, string[] memory) {

@@ -90,7 +90,7 @@ const LandRegistry = () => {
       // Check if the property exists and if the user is the owner
       const property = await contract.methods.viewPropertyByPId(p_id).call();
       if (property[0] === '') {
-        alert("You don't own this property.");
+        alert("Property does not exist.");
         return;
       }
 
@@ -100,7 +100,7 @@ const LandRegistry = () => {
       }
 
       await contract.methods
-        .transferProperty(p_id, newOwner) // Transfer the property
+        .transferProperty(p_id, newOwner) // Transfer the property using p_id
         .send({ from: account });
       console.log('Property transferred!');
       setNewOwner('');
@@ -164,6 +164,12 @@ const LandRegistry = () => {
       )}
 
       <h2>Transfer Property</h2>
+      <input
+        type="text"
+        placeholder="Property ID (p_id)"
+        value={p_id}
+        onChange={(e) => setPid(e.target.value)}
+      />
       <input
         type="text"
         placeholder="New Owner Address"
