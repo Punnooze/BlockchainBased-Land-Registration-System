@@ -4,7 +4,7 @@ import Web3 from 'web3';
 import LandRegistryContract from './LandRegistry.json'; // Ensure the path is correct
 
 const LandRegistry = () => {
-  const [propertyId, setPropertyId] = useState('');
+  const [p_id, setPid] = useState('');
   const [propertyDetails, setPropertyDetails] = useState('');
   const [newOwner, setNewOwner] = useState('');
   const [currentOwner, setCurrentOwner] = useState('');
@@ -53,10 +53,10 @@ const LandRegistry = () => {
 
     try {
       await contract.methods
-        .registerProperty(propertyId, account, propertyDetails)
+        .registerProperty(p_id, account, propertyDetails)
         .send({ from: account });
       console.log('Property registered!');
-      setPropertyId('');
+      setPid('');
       setPropertyDetails('');
       fetchAllProperties(); // Fetch properties after registering a new one
     } catch (error) {
@@ -71,7 +71,8 @@ const LandRegistry = () => {
     }
 
     try {
-      const property = await contract.methods.viewProperty(propertyId).call();
+      // Call the new smart contract function to view property by p_id
+      const property = await contract.methods.viewPropertyByPId(p_id).call();
       setCurrentOwner(property[1]); // Update current owner to display
       setPropertyDetails(property[2]);
     } catch (error) {
@@ -86,34 +87,26 @@ const LandRegistry = () => {
     }
 
     try {
+      // Check if the property exists and if the user is the owner
+      const property = await contract.methods.viewPropertyByPId(p_id).call();
+      if (property[0] === '') {
+        alert("You don't own this property.");
+        return;
+      }
+
+      if (property[1] !== account) {
+        alert("You don't own this property.");
+        return;
+      }
+
       await contract.methods
-        .transferProperty(propertyId, newOwner)
+        .transferProperty(p_id, newOwner) // Transfer the property
         .send({ from: account });
       console.log('Property transferred!');
       setNewOwner('');
       fetchAllProperties(); // Fetch properties after transferring
     } catch (error) {
       console.error('Error during property transfer: ', error);
-    }
-  };
-
-  const deleteProperty = async () => {
-    alert('Delete functionality is disabled for immutability. Use reset instead.');
-    // This functionality can be adjusted if required
-  };
-
-  const resetProperties = async () => {
-    if (!contract) {
-      alert('Contract is not loaded.');
-      return;
-    }
-
-    try {
-      await contract.methods.resetProperties().send({ from: account });
-      console.log('All properties reset!');
-      fetchAllProperties(); // Fetch properties after resetting
-    } catch (error) {
-      console.error('Error during reset: ', error);
     }
   };
 
@@ -125,12 +118,13 @@ const LandRegistry = () => {
 
     try {
       const { 0: ids, 1: owners, 2: details } = await contract.methods.getAllProperties().call();
-      const allProperties = ids.map((id, index) => ({
-        id,
+      const allProperties = ids.map((id, index) => ( {
+        id: id.replace(account, ''), // Show p_id instead of merged id
         owner: owners[index],
         details: details[index],
       }));
-      setProperties(allProperties); // Update state with all properties
+      // Reverse the array so the newest properties are displayed first
+      setProperties(allProperties.reverse()); // Update state with all properties
     } catch (error) {
       console.error('Error fetching all properties: ', error);
     }
@@ -141,9 +135,9 @@ const LandRegistry = () => {
       <h2>Register Property</h2>
       <input
         type="text"
-        placeholder="Property ID"
-        value={propertyId}
-        onChange={(e) => setPropertyId(e.target.value)}
+        placeholder="Original Property ID (p_id)"
+        value={p_id}
+        onChange={(e) => setPid(e.target.value)}
       />
       <input
         type="text"
@@ -156,9 +150,9 @@ const LandRegistry = () => {
       <h2>View Property</h2>
       <input
         type="text"
-        placeholder="Property ID"
-        value={propertyId}
-        onChange={(e) => setPropertyId(e.target.value)}
+        placeholder="Property ID (p_id)"
+        value={p_id}
+        onChange={(e) => setPid(e.target.value)}
       />
       <button onClick={viewProperty}>View Property</button>
       {propertyDetails && (
@@ -178,20 +172,14 @@ const LandRegistry = () => {
       />
       <button onClick={transferProperty}>Transfer Property</button>
 
-      <h2>Reset Properties</h2>
-      <button onClick={resetProperties}>Reset All Properties</button>
-
-      <h2>All Registered Properties</h2>
-      <button onClick={fetchAllProperties}>Fetch All Properties</button>
-      {properties.length > 0 && (
-        <ul>
-          {properties.map((property) => (
-            <li key={property.id}>
-              {property.id} - Owner: {property.owner} - Details: {property.details}
-            </li>
-          ))}
-        </ul>
-      )}
+      <h2>All Properties</h2>
+      <ul>
+        {properties.map((property, index) => (
+          <li key={index}>
+            ID: {property.id}, Owner: {property.owner}, Details: {property.details}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };

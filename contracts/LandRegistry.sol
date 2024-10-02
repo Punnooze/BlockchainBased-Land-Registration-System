@@ -3,46 +3,61 @@ pragma solidity ^0.8.0;
 
 contract LandRegistry {
     struct Property {
-        string propertyId;
-        string owner;
-        string details;
-        bool exists;
+        string propertyId;  // Combination of p_id and owner address
+        string p_id;        // Original property ID
+        address owner;      // Current owner's address
+        string details;     // Property details
+        bool exists;        // Indicates if the property exists
     }
 
     mapping(string => Property) private properties;
     string[] private propertyIds; // To keep track of all registered property IDs
+    mapping(string => bool) private registeredPIds; // Track registered p_ids to ensure uniqueness
 
-    event PropertyRegistered(string propertyId, string owner);
-    event PropertyTransferred(string propertyId, string oldOwner, string newOwner);
+    event PropertyRegistered(string propertyId, address owner);
+    event PropertyTransferred(string propertyId, address oldOwner, address newOwner);
 
-    function registerProperty(string memory _propertyId, string memory _owner, string memory _details) public {
-        require(!properties[_propertyId].exists, "Property already registered");
-        
-        properties[_propertyId] = Property(_propertyId, _owner, _details, true);
-        propertyIds.push(_propertyId); // Add the property ID to the list
-        emit PropertyRegistered(_propertyId, _owner);
+    function registerProperty(string memory _p_id, address _owner, string memory _details) public {
+        require(!registeredPIds[_p_id], "Property ID already registered");
+
+        string memory propertyId = string(abi.encodePacked(_p_id, _owner));
+        properties[propertyId] = Property(propertyId, _p_id, _owner, _details, true);
+        propertyIds.push(propertyId);
+        registeredPIds[_p_id] = true; // Mark p_id as registered
+
+        emit PropertyRegistered(propertyId, _owner);
     }
 
-    function viewProperty(string memory _propertyId) public view returns (string memory, string memory, string memory) {
-        require(properties[_propertyId].exists, "Property does not exist");
-        
-        Property memory property = properties[_propertyId];
-        return (property.propertyId, property.owner, property.details);
+    // New function to view property by p_id
+    function viewPropertyByPId(string memory _p_id) public view returns (string memory, address, string memory) {
+        // Loop through propertyIds to find the latest entry for the given p_id
+        for (uint256 i = propertyIds.length; i > 0; i--) {
+            Property memory property = properties[propertyIds[i - 1]];
+            if (keccak256(abi.encodePacked(property.p_id)) == keccak256(abi.encodePacked(_p_id))) {
+                return (property.propertyId, property.owner, property.details);
+            }
+        }
+        revert("Property does not exist");
     }
 
-    function transferProperty(string memory _propertyId, string memory _newOwner) public {
-        require(properties[_propertyId].exists, "Property does not exist");
-        require(keccak256(abi.encodePacked(properties[_propertyId].owner)) == keccak256(abi.encodePacked(msg.sender)), "Only the owner can transfer the property");
-        
-        string memory oldOwner = properties[_propertyId].owner;
-        properties[_propertyId].owner = _newOwner;
-        emit PropertyTransferred(_propertyId, oldOwner, _newOwner);
+    function transferProperty(string memory _p_id, address _newOwner) public {
+        // Construct current property ID based on p_id and caller's address
+        string memory currentPropertyId = string(abi.encodePacked(_p_id, msg.sender));
+        require(properties[currentPropertyId].exists, "Property does not exist");
+        require(properties[currentPropertyId].owner == msg.sender, "Only the owner can transfer the property");
+
+        // Create new property ID for the new owner
+        string memory newPropertyId = string(abi.encodePacked(_p_id, _newOwner));
+        properties[newPropertyId] = Property(newPropertyId, _p_id, _newOwner, properties[currentPropertyId].details, true);
+        propertyIds.push(newPropertyId);
+
+        emit PropertyTransferred(currentPropertyId, msg.sender, _newOwner);
     }
 
-    // New function to retrieve all registered properties
-    function getAllProperties() public view returns (string[] memory, string[] memory, string[] memory) {
+    // Function to retrieve all registered properties
+    function getAllProperties() public view returns (string[] memory, address[] memory, string[] memory) {
         string[] memory ids = new string[](propertyIds.length);
-        string[] memory owners = new string[](propertyIds.length);
+        address[] memory owners = new address[](propertyIds.length);
         string[] memory details = new string[](propertyIds.length);
 
         for (uint256 i = 0; i < propertyIds.length; i++) {
